@@ -16,15 +16,22 @@ def create_table():
     conn.commit()
     conn.close()
 
-# Fonction pour hacher le mot de passe avec un sel aléatoire
-def hash_password(password):
-    # Générer un sel aléatoire sécurisé
-    salt = os.urandom(32)
-    # Utiliser le sel pour hacher le mot de passe
-    hashed_password = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
-    # Retourner le sel et le mot de passe haché sous forme de bytes
-    return salt + hashed_password
 
+
+
+def hash_password(password):
+    # Convertir la variable password en chaîne de caractères si elle est de type bytes
+    password_str = password.decode('utf-8') if isinstance(password, bytes) else password
+    # Créer un objet de hachage SHA256
+    h = hashlib.sha256()
+    # Mettre à jour le hachage avec la chaîne de caractères encodée
+    h.update(password_str.encode('utf-8'))
+    # Récupérer le hachage sous forme de chaîne hexadécimale
+    password_hash = h.hexdigest()
+    return password_hash
+
+ 
+    
 # Fonction pour insérer un nouvel utilisateur dans la base de données
 def insert_user(username, password, email, profile_image):
     conn = sqlite3.connect('users.db')

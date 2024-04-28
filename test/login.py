@@ -1,42 +1,38 @@
-import streamlit as st
-import streamlit_authenticator
-
-
-import sqlite3
 import hashlib
-import os
+import yaml
+import streamlit as st
+from yaml.loader import SafeLoader
+import streamlit_authenticator as stauth
+from streamlit_authenticator.utilities.exceptions import LoginError
 from streamlit_option_menu import option_menu
-from PIL import Image
 
+# Loading config file
+with open('config.yaml', 'r', encoding='utf-8') as file:
+    config = yaml.load(file, Loader=SafeLoader)
 
+# Creating the authenticator object
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+    config['pre-authorized']
+)
 
-
-
-# Fonction pour hacher le mot de passe
-
+# Function to hash the password
 def hash_password(password):
-    # Convertir la variable password en chaîne de caractères si elle est de type bytes
-    password_str = password.decode('utf-8') if isinstance(password, bytes) else password
-    # Créer un objet de hachage SHA256
     h = hashlib.sha256()
-    # Mettre à jour le hachage avec la chaîne de caractères encodée
-    h.update(password_str.encode('utf-8'))
-    # Récupérer le hachage sous forme de chaîne hexadécimale
-    password_hash = h.hexdigest()
-    return password_hash
+    h.update(password.encode('utf-8'))
+    return h.hexdigest()
 
-
-
-# Fonction pour vérifier les informations d'identification dans la base de données
-def check_credentials(username, password):
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    hashed_password =hash_password(password)
-    c.execute('''SELECT * FROM users WHERE username=? AND password=?''', (username, hashed_password))
-    user_id = c.fetchone()
-    conn.close()
-    return user_id
-
+# Function to save user information to YAML file
+def save_user_info_to_yaml(username, email, password):
+    hashed_password = hash_password(password)
+    user_info = {'username': username, 'email': email, 'password': hashed_password}
+    with open('users.yaml', 'a') as file:
+        yaml.dump(user_info, file)
+        
+        
 def main():
     # Barre de navigation horizontale
     st.markdown(
@@ -64,28 +60,26 @@ def main():
         icons=['lock', 'house'],
         menu_icon="cast", default_index=0, orientation="horizontal",
     )
-
     if selected_option == "Connection":
-        st.title("Page d'authentification")
-        # Créer des zones de saisie pour le nom d'utilisateur et le mot de passe
-        username = st.text_input("Nom d'utilisateur")
-        password = st.text_input("Mot de passe", type="password")
+        st.title("authentifier")
 
-        if st.button("Se connecter"):
-            # Authentifier l'utilisateur
-            user_id = check_credentials(username, password)
-            if user_id:
-                st.session_state['user_id'] = user_id
-                st.success("Connexion réussie ! Redirection vers la page principale...")
-                # Redirection vers la page app.py
-                os.system("streamlit run app.py --server.enableXsrfProtection=false")
-            else:
-                st.error("Nom d'utilisateur ou mot de passe incorrect.")
+        try:
+            authenticator.login()
+        except LoginError as e:
+            st.error(e)
 
-        # Bouton de création d'un compte
-        if st.button("Créer un compte"):
-            # Redirection vers la page creation.py
-            os.system("streamlit run creation.py --server.enableXsrfProtection=false")
+        if st.session_state.get("authentication_status"):
+            
+            st.write(f'Welcome *{st.session_state["name"]}*')
+            st.title('Some content')
+            # Rediriger l'utilisateur vers une autre page après l'authentification
+            st.write("Redirecting...")
+            st.experimental_set_query_params(logged_in=True)
+            st.experimental_rerun()
+        elif st.session_state.get("authentication_status") is False:
+            st.error('Username/password is incorrect')
+        elif st.session_state.get("authentication_status") is None:
+            st.warning('Please enter your username and password')
 
 
     
@@ -137,5 +131,5 @@ def main():
         video_url = "https://www.youtube.com/watch?v=G6hVRVG74lc"  
         st.video(video_url)
 
-if __name__ == "__main__":
-    main()
+# Appel de la fonction main
+main()

@@ -1,0 +1,13 @@
+credentials:
+  usernames:
+    user1:
+      password: password1
+      logged_in: false
+    user2:
+      password: password2
+      logged_in: false
+cookie:
+  name: cookie_name
+  key: cookie_key
+  expiry_days: 7
+pre-authorized: true

@@ -6,6 +6,7 @@ from streamlit_option_menu import option_menu
 import sqlite3
 
 
+
 def get_profile_data(user_id):
     # Se connecter à la base de données SQLite
     conn = sqlite3.connect('users.db')
@@ -46,7 +47,8 @@ st.markdown(
 )
 
 def acceuil():
-
+   
+   
     selected = option_menu(
         menu_title=None,
         options=["Home","Profil", "Traduction From Image", "Traduction From Video", "Traduction Using WebCam"],
@@ -55,7 +57,7 @@ def acceuil():
         
     )
     if selected == "Home":
-        st.title("Sign Language Translator")
+        st.title("Sign Language Translator :wave:")
         
         st.write('##### Welcome to our Sign Language Translation app powered by AI, where communication barriers dissolve as gestures are seamlessly translated into spoken language.!')
         st.image('image1.jpg')
@@ -214,25 +216,31 @@ def webcam_object_detect():
                 st.sidebar.error("Error loading video: " + str(e))
 
 def profil_page():
-    st.title("Profil Page")
-    st.write("Welcome to your profile page. Here, you can view and edit your profile information.")
-
     # Récupérer l'ID de l'utilisateur à partir de la session
     user_id = st.session_state.get('user_id')
-
     if user_id:
-        # Récupérer les données du profil de l'utilisateur
-        profile_data = get_profile_data(user_id)
-
-        if profile_data:
-            # Afficher les données du profil
-            st.write(f"Name: {profile_data[0]}")
-            st.write(f"Email: {profile_data[1]}")
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute('''SELECT profile_image, username, email FROM users WHERE id=?''', (user_id,))
+        user_data = c.fetchone()
+        conn.close()
+        
+        if user_data:
+            profile_image_data, username, email = user_data
+            
+            st.title("Profil Page")
+            st.write("Bienvenue sur votre page de profil. Ici, vous pouvez consulter et modifier vos informations de profil.")
+            
             # Afficher l'image de profil
-            st.image(profile_data[5], caption='Profile Image', use_column_width=True)
+            st.image(profile_image_data, caption="Photo de profil", use_column_width=True, output_format="JPEG")
+            
+            # Afficher le nom d'utilisateur et l'e-mail
+            st.write(f"Nom d'utilisateur : {username}")
+            st.write(f"E-mail : {email}")
         else:
-            st.write("User not found.")
+            st.error("Aucune donnée utilisateur trouvée.")
     else:
-        st.error("You are not logged in.")
+        st.error("Vous n'êtes pas connecté.")
+
 
 acceuil()
